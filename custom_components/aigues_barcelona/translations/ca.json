@@ -13,7 +13,8 @@
       "user": {
         "data": {
           "username": "Usuari (DNI/NIE)",
-          "password": "Contrasenya"
+          "password": "Contrasenya",
+          "company_identification": "Identificació d'Empresa (opcional)"
         },
         "title": "Configurar integraci\u00f3"
       },

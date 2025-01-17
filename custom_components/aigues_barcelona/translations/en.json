@@ -13,7 +13,8 @@
       "user": {
         "data": {
           "username": "Username (DNI/NIE)",
-          "password": "Password"
+          "password": "Password",
+          "company_identification": "Company Identification (optional)"
         },
         "title": "Setup integration"
       },

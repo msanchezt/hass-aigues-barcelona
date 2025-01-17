@@ -13,6 +13,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from .api import AiguesApiClient
 from .const import DOMAIN
+from .const import CONF_COMPANY_IDENTIFICATOR
 from .service import async_setup as setup_service
 
 # from homeassistant.exceptions import ConfigEntryNotReady
@@ -23,7 +24,11 @@ PLATFORMS = [Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # TODO Change after fixing Recaptcha.
-    api = AiguesApiClient(entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
+    api = AiguesApiClient(
+        entry.data[CONF_USERNAME],
+        entry.data[CONF_PASSWORD],
+        company_identification=entry.data.get(CONF_COMPANY_IDENTIFICATOR)
+    )
     api.set_token(entry.data.get(CONF_TOKEN))
 
     if api.is_token_expired():

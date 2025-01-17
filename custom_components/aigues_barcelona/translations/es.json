@@ -13,7 +13,8 @@
       "user": {
         "data": {
           "username": "Usuario (DNI/NIE)",
-          "password": "Contrase\u00f1a"
+          "password": "Contraseña",
+          "company_identification": "Identificación de Empresa (opcional)"
         },
         "title": "Configurar integraci\u00f3n"
       },

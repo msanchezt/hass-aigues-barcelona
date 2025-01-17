@@ -41,6 +41,7 @@ from .const import CONF_CONTRACT
 from .const import CONF_VALUE
 from .const import DEFAULT_SCAN_PERIOD
 from .const import DOMAIN
+from .const import CONF_COMPANY_IDENTIFICATOR  # Add this
 
 from typing import Optional
 
@@ -65,11 +66,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     password = config_entry.data[CONF_PASSWORD]
     contracts = config_entry.data[CONF_CONTRACT]
     token = config_entry.data.get(CONF_TOKEN)
+    company_identification = config_entry.data.get(CONF_COMPANY_IDENTIFICATOR)
 
     contadores = list()
 
     for contract in contracts:
-        coordinator = ContratoAgua(hass, username, password, contract, token=token)
+        coordinator = ContratoAgua(
+            hass, 
+            username, 
+            password, 
+            contract, 
+            token=token,
+            company_identification=company_identification
+        )
         contadores.append(ContadorAgua(coordinator))
 
     # postpone first refresh to speed up startup
@@ -100,6 +109,7 @@ class ContratoAgua(TimestampDataUpdateCoordinator):
         contract: str,
         token: str = None,
         prev_data=None,
+        company_identification=None,
     ) -> None:
         """Initialize the data handler."""
         self.reset = prev_data is None

@@ -11,6 +11,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.const import CONF_TOKEN
 from homeassistant.const import CONF_USERNAME
+#from homeassistant.const import CONF_COMPANY_IDENTIFICATOR
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
@@ -18,6 +19,7 @@ from .api import AiguesApiClient
 from .const import API_ERROR_TOKEN_REVOKED
 from .const import CONF_CONTRACT
 from .const import DOMAIN
+from .const import CONF_COMPANY_IDENTIFICATOR
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ ACCOUNT_CONFIG_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
+        vol.Optional(CONF_COMPANY_IDENTIFICATOR): cv.string,
     }
 )
 TOKEN_SCHEMA = vol.Schema({vol.Required(CONF_TOKEN): cv.string})
@@ -57,43 +60,46 @@ async def validate_credentials(
     username = data[CONF_USERNAME]
     password = data[CONF_PASSWORD]
     token = data.get(CONF_TOKEN)
+    company_identification = data.get(CONF_COMPANY_IDENTIFICATOR)
 
-    if not check_valid_nif(username):
-        raise InvalidUsername
+    _LOGGER.debug(f"Validating credentials with company_identification: {company_identification}")
 
     try:
-        api = AiguesApiClient(username, password)
+        api = AiguesApiClient(
+            username, 
+            password, 
+            company_identification=company_identification
+        )
         if token:
             api.set_token(token)
+            _LOGGER.debug("Token set, attempting to validate")
+            if api.is_token_expired():
+                _LOGGER.warning("Token is expired")
+                raise TokenExpired
         else:
             _LOGGER.info("Attempting to login")
             login = await hass.async_add_executor_job(api.login)
             if not login:
+                if api.last_response and "recaptchaClientResponse" in str(api.last_response):
+                    _LOGGER.debug("Recaptcha required")
+                    raise RecaptchaAppeared
+                _LOGGER.debug(f"Login failed")
                 raise InvalidAuth
-            _LOGGER.info("Login succeeded!")
+
+        # Verify we can access contracts
         contracts = await hass.async_add_executor_job(api.contracts, username)
+        if not contracts:
+            _LOGGER.warning("No contracts found after login")
+            raise InvalidAuth
 
         available_contracts = [x["contractDetail"]["contractNumber"] for x in contracts]
         return {CONF_CONTRACT: available_contracts}
 
-    except Exception:
-        _LOGGER.debug(f"Last data: {api.last_response}")
-        if not api.last_response:
-            return False
-
-        if (
-            isinstance(api.last_response, dict)
-            and api.last_response.get("path") == "recaptchaClientResponse"
-        ):
+    except Exception as e:
+        _LOGGER.error(f"Error during validation: {str(e)}")
+        if "recaptchaClientResponse" in str(e):
             raise RecaptchaAppeared
-
-        if (
-            isinstance(api.last_response, str)
-            and api.last_response == API_ERROR_TOKEN_REVOKED
-        ):
-            raise TokenExpired
-
-        return False
+        raise InvalidAuth from e
 
 
 class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -187,7 +193,12 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 raise InvalidAuth
             contracts = info[CONF_CONTRACT]
 
-            await self.async_set_unique_id(user_input["username"])
+            # Create unique ID based on username and company_identification if present
+            unique_id = user_input[CONF_USERNAME]
+            if user_input.get(CONF_COMPANY_IDENTIFICATOR):
+                unique_id = f"{unique_id}_{user_input[CONF_COMPANY_IDENTIFICATOR]}"
+
+            await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
         except NotImplementedError:
             errors["base"] = "not_implemented"
@@ -207,12 +218,16 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "already_configured"
         else:
             _LOGGER.debug(f"Creating entity with {user_input} and {contracts=}")
-            nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
+            
+            if user_input.get(CONF_COMPANY_IDENTIFICATOR):
+                title = f"Aigua ({user_input[CONF_COMPANY_IDENTIFICATOR]})"
+            else:
+                nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
+                title = f"Aigua ****{nif_oculto}"
 
             return self.async_create_entry(
-                title=f"Aigua ****{nif_oculto}", data={**user_input, **info}
+                title=title, data={**user_input, **info}
             )
-
         return self.async_show_form(
             step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA, errors=errors
         )
