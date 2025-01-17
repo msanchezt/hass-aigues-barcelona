@@ -188,12 +188,10 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             self.stored_input = user_input
             info = await validate_credentials(self.hass, user_input)
-            _LOGGER.debug(f"Result is {info}")
             if not info:
                 raise InvalidAuth
             contracts = info[CONF_CONTRACT]
 
-            # Create unique ID based on username and company_identification if present
             unique_id = user_input[CONF_USERNAME]
             if user_input.get(CONF_COMPANY_IDENTIFICATOR):
                 unique_id = f"{unique_id}_{user_input[CONF_COMPANY_IDENTIFICATOR]}"
@@ -208,7 +206,6 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="token", data_schema=TOKEN_SCHEMA, errors=errors
             )
         except RecaptchaAppeared:
-            # Ask for OAuth Token to login.
             return self.async_show_form(step_id="token", data_schema=TOKEN_SCHEMA)
         except InvalidUsername:
             errors["base"] = "invalid_auth"
@@ -217,20 +214,15 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except AlreadyConfigured:
             errors["base"] = "already_configured"
         else:
-            _LOGGER.debug(f"Creating entity with {user_input} and {contracts=}")
-            
             if user_input.get(CONF_COMPANY_IDENTIFICATOR):
                 title = f"Aigua ({user_input[CONF_COMPANY_IDENTIFICATOR]})"
             else:
                 nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
                 title = f"Aigua ****{nif_oculto}"
 
-            return self.async_create_entry(
-                title=title, data={**user_input, **info}
-            )
-        return self.async_show_form(
-            step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA, errors=errors
-        )
+            return self.async_create_entry(title=title, data={**user_input, **info})
+            
+        return self.async_show_form(step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA, errors=errors)
 
 
 class AlreadyConfigured(HomeAssistantError):

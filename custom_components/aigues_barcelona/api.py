@@ -16,7 +16,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 class AiguesApiClient:
     def __init__(
-        self, username, password, company_identification=None, contract=None, session: requests.Session = None
+        self, username, password, contract=None, session: requests.Session = None
     ):
         if session is None:
             session = requests.Session()
@@ -33,7 +33,6 @@ class AiguesApiClient:
         self._username = username
         self._password = password
         self._contract = contract
-        self._company_identification = company_identification
         self.last_response = None
 
     def _generate_url(self, path, query) -> str:
@@ -45,11 +44,9 @@ class AiguesApiClient:
     def _return_token_field(self, key):
         token = self.cli.cookies.get_dict().get(API_COOKIE_TOKEN)
         if not token:
-            _LOGGER.warning("Token login missing")
             return False
 
         data = token.split(".")[1]
-        _LOGGER.debug(data)
         # add padding to avoid failures
         data = base64.urlsafe_b64decode(data + "==")
 
@@ -103,7 +100,7 @@ class AiguesApiClient:
         query = {"lang": "ca", "recaptchaClientResponse": recaptcha}
         body = {
             "scope": "ofex",
-            "companyIdentification": self._company_identification or "",
+            "companyIdentification": "",
             "userIdentification": user,
             "password": password,
         }
@@ -112,14 +109,12 @@ class AiguesApiClient:
             "Ocp-Apim-Subscription-Key": "6a98b8b8c7b243cda682a43f09e6588b;product=portlet-login-ofex",
         }
 
-        _LOGGER.debug(f"Login attempt with body: {body}")
         r = self._query(path, query, body, headers, method="POST")
-        _LOGGER.debug(f"Login response status: {r.status_code}")
-        _LOGGER.debug(f"Login response: {r.text}")
 
+        _LOGGER.debug(r)
         error = r.json().get("errorMessage", None)
         if error:
-            _LOGGER.warning(f"Login error: {error}")
+            _LOGGER.warning(error)
             return False
 
         access_token = r.json().get("access_token", None)
@@ -127,7 +122,6 @@ class AiguesApiClient:
             _LOGGER.warning("Access token missing")
             return False
 
-        _LOGGER.debug("Login successful, access token received")
         return True
 
         # set as cookie: ofexTokenJwt
@@ -172,19 +166,16 @@ class AiguesApiClient:
         assert r.json().get("user_data"), "User data missing"
         return r.json()
 
-    def contracts(self, user=None, status=["ASSIGNED", "PENDING"], client_id=None):
+    def contracts(self, user=None, status=["ASSIGNED", "PENDING"]):
         if user is None:
             user = self._return_token_field("name")
-        if client_id is None:
-            client_id = self._company_identification or user
         if isinstance(status, str):
             status = [status]
 
         path = "/ofex-contracts-api/contracts"
-        query = {"lang": "ca", "userId": user, "clientId": client_id}
-        # Modify how status parameters are added to match the web request format
-        for stat in status:
-            query["assignationStatus"] = stat.upper()
+        query = {"lang": "ca", "userId": user, "clientId": user}
+        for idx, stat in enumerate(status):
+            query[f"assignationStatus[{str(idx)}]"] = stat.upper()
 
         r = self._query(path, query)
 
