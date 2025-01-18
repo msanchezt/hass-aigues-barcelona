@@ -128,8 +128,22 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         current provided token."""
 
         if not user_input:
+            # Get the username/company_id from stored input
+            identifier = self.stored_input.get(CONF_USERNAME)
+            company_id = self.stored_input.get(CONF_COMPANY_IDENTIFICATOR)
+            
+            # Mask the identifier showing only last 3 chars
+            if identifier:
+                masked_id = f"***{identifier[-3:]}"
+            if company_id:
+                masked_id = f"***{company_id[-3:]}"
+            
             return self.async_show_form(
-                step_id="reauth_confirm", data_schema=TOKEN_SCHEMA
+                step_id="reauth_confirm",
+                data_schema=TOKEN_SCHEMA,
+                description_placeholders={
+                    "account_id": masked_id
+                }
             )
 
         errors = {}
