@@ -164,58 +164,54 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm", data_schema=TOKEN_SCHEMA, errors=errors
         )
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle configuration step from UI."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA
-            )
+async def async_step_user(
+    self, user_input: dict[str, Any] | None = None
+) -> FlowResult:
+    """Handle configuration step from UI."""
+    if user_input is None:
+        return self.async_show_form(
+            step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA
+        )
 
-        errors = {}
+    errors = {}
 
-        try:
-            self.stored_input = user_input
-            info = await validate_credentials(self.hass, user_input)
-            if not info:
-                raise InvalidAuth
-            contracts = info[CONF_CONTRACT]
+    try:
+        self.stored_input = user_input
+        info = await validate_credentials(self.hass, user_input)
+        _LOGGER.debug(f"Result is {info}")
+        if not info:
+            raise InvalidAuth
+        contracts = info[CONF_CONTRACT]
 
-            unique_id = user_input[CONF_USERNAME]
-            if user_input.get(CONF_COMPANY_IDENTIFICATOR):
-                unique_id = f"{unique_id}_{user_input[CONF_COMPANY_IDENTIFICATOR]}"
+        await self.async_set_unique_id(user_input["username"])
+        self._abort_if_unique_id_configured()
+    except NotImplementedError:
+        errors["base"] = "not_implemented"
+    except TokenExpired:
+        errors["base"] = "token_expired"
+        return self.async_show_form(
+            step_id="token", data_schema=TOKEN_SCHEMA, errors=errors
+        )
+    except RecaptchaAppeared:
+        # Ask for OAuth Token to login.
+        return self.async_show_form(step_id="token", data_schema=TOKEN_SCHEMA)
+    except InvalidUsername:
+        errors["base"] = "invalid_auth"
+    except InvalidAuth:
+        errors["base"] = "invalid_auth"
+    except AlreadyConfigured:
+        errors["base"] = "already_configured"
+    else:
+        _LOGGER.debug(f"Creating entity with {user_input} and {contracts=}")
+        nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
 
-            await self.async_set_unique_id(unique_id)
-            self._abort_if_unique_id_configured()
-        except NotImplementedError:
-            errors["base"] = "not_implemented"
-        except TokenExpired:
-            errors["base"] = "token_expired"
-            return self.async_show_form(
-                step_id="token", data_schema=TOKEN_SCHEMA, errors=errors
-            )
-        except RecaptchaAppeared:
-            return self.async_show_form(step_id="token", data_schema=TOKEN_SCHEMA)
-        except InvalidUsername:
-            errors["base"] = "invalid_auth"
-        except InvalidAuth:
-            errors["base"] = "invalid_auth"
-        except AlreadyConfigured:
-            errors["base"] = "already_configured"
-        else:
-            if user_input.get(CONF_COMPANY_IDENTIFICATOR):
-                company_id = user_input[CONF_COMPANY_IDENTIFICATOR]
-                # Show last 3 digits of company ID
-                hidden_id = f"****{company_id[-3:]}"
-                title = f"Aigua ({hidden_id})"
-            else:
-                nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
-                title = f"Aigua ****{nif_oculto}"
+        return self.async_create_entry(
+            title=f"Aigua ****{nif_oculto}", data={**user_input, **info}
+        )
 
-            return self.async_create_entry(title=title, data={**user_input, **info})
-            
-        return self.async_show_form(step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA, errors=errors)
+    return self.async_show_form(
+        step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA, errors=errors
+    )
 
 
 class AlreadyConfigured(HomeAssistantError):
