@@ -215,7 +215,10 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "already_configured"
         else:
             if user_input.get(CONF_COMPANY_IDENTIFICATOR):
-                title = f"Aigua ({user_input[CONF_COMPANY_IDENTIFICATOR]})"
+                company_id = user_input[CONF_COMPANY_IDENTIFICATOR]
+                # Show last 3 digits of company ID
+                hidden_id = f"****{company_id[-3:]}"
+                title = f"Aigua ({hidden_id})"
             else:
                 nif_oculto = user_input[CONF_USERNAME][-3:][0:2]
                 title = f"Aigua ****{nif_oculto}"
