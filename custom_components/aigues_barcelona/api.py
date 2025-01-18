@@ -63,35 +63,48 @@ class AiguesApiClient:
             headers = dict()
         headers = {**self.headers, **headers}
 
-        resp = self.cli.request(
-            method=method,
-            url=self._generate_url(path, query),
-            json=json,
-            headers=headers,
-            timeout=TIMEOUT,
-        )
-        _LOGGER.debug(f"Query done with code {resp.status_code}")
-        msg = resp.text
-        self.last_response = resp.text
-        if len(msg) > 5 and (msg.startswith("{") or msg.startswith("[")):
-            msg = resp.json()
-            if isinstance(msg, list) and len(msg) == 1:
-                msg = msg[0]
-            self.last_response = msg.copy()
-            msg = msg.get("message", resp.text)
+        try:
+            resp = self.cli.request(
+                method=method,
+                url=self._generate_url(path, query),
+                json=json,
+                headers=headers,
+                timeout=TIMEOUT,
+            )
+            _LOGGER.debug(f"Query done with code {resp.status_code}")
+            
+            # Store raw response first
+            self.last_response = resp.text
+            
+            # Try to parse JSON response if possible
+            try:
+                if resp.text and len(resp.text) > 0:
+                    msg = resp.json()
+                    if isinstance(msg, list) and len(msg) == 1:
+                        msg = msg[0]
+                    self.last_response = msg
+            except json.JSONDecodeError:
+                msg = resp.text
+                _LOGGER.debug(f"Response is not JSON: {msg}")
 
-        if resp.status_code == 500:
-            raise Exception(f"Server error: {msg}")
-        if resp.status_code == 404:
-            raise Exception(f"Not found: {msg}")
-        if resp.status_code == 401:
-            raise Exception(f"Denied: {msg}")
-        if resp.status_code == 400:
-            raise Exception(f"Bad response: {msg}")
-        if resp.status_code == 429:
-            raise Exception(f"Rate-Limited: {msg}")
+            if resp.status_code == 503:
+                raise Exception("Service temporarily unavailable")
+            if resp.status_code == 500:
+                raise Exception(f"Server error: {msg}")
+            if resp.status_code == 404:
+                raise Exception(f"Not found: {msg}")
+            if resp.status_code == 401:
+                raise Exception(f"Denied: {msg}")
+            if resp.status_code == 400:
+                raise Exception(f"Bad response: {msg}")
+            if resp.status_code == 429:
+                raise Exception(f"Rate-Limited: {msg}")
 
-        return resp
+            return resp
+
+        except requests.exceptions.RequestException as e:
+            _LOGGER.error(f"Request failed: {str(e)}")
+            raise Exception(f"Request failed: {str(e)}")
 
     def login(self, user=None, password=None, recaptcha=None):
         if user is None:
