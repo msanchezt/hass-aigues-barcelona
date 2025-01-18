@@ -181,15 +181,17 @@ class AiguesApiClient:
         path = "/ofex-contracts-api/contracts"
         query = {
             "userId": user,
-            "clientId": self._company_identification or user,  # Use company ID if available
+            "clientId": self._company_identification or user,
             "lang": "ca",
         }
 
-        # Add status parameters directly, not as array indices
+        # Add each status as a separate query parameter
         for stat in status:
             if "assignationStatus" not in query:
-                query["assignationStatus"] = []
-            query["assignationStatus"].append(stat.upper())
+                query["assignationStatus"] = stat.upper()
+            else:
+                # Append additional status values
+                query["assignationStatus"] = f"{query['assignationStatus']}&assignationStatus={stat.upper()}"
 
         r = self._query(path, query)
 
