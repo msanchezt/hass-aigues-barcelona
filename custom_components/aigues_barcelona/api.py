@@ -16,7 +16,12 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 class AiguesApiClient:
     def __init__(
-        self, username, password, contract=None, session: requests.Session = None
+        self, 
+        username, 
+        password, 
+        contract=None, 
+        session: requests.Session = None,
+        company_identification=None
     ):
         if session is None:
             session = requests.Session()
@@ -33,6 +38,7 @@ class AiguesApiClient:
         self._username = username
         self._password = password
         self._contract = contract
+        self._company_identification = company_identification
         self.last_response = None
 
     def _generate_url(self, path, query) -> str:
@@ -100,7 +106,7 @@ class AiguesApiClient:
         query = {"lang": "ca", "recaptchaClientResponse": recaptcha}
         body = {
             "scope": "ofex",
-            "companyIdentification": "",
+            "companyIdentification": self._company_identification or "",
             "userIdentification": user,
             "password": password,
         }
