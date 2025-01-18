@@ -248,31 +248,22 @@ class AiguesApiClient:
         return self.invoices(contract, user, last_months=0, mode="DEBT")
 
     def consumptions(
-        self, date_from, date_to=None, contract=None, user=None, frequency="HOURLY"
+        self, date_from, date_to, contract=None, user=None, frequency="HOURLY"
     ):
         if user is None:
-            user = self._return_token_field("name")
+            user = self._username
         if contract is None:
-            contract = self.first_contract
-        if frequency not in ["HOURLY", "DAILY"]:
-            raise ValueError(f"Invalid {frequency=}")
-
-        if date_to is None:
-            date_to = date_from + datetime.timedelta(days=1)
-        if isinstance(date_from, datetime.date):
-            date_from = date_from.strftime("%d-%m-%Y")
-        if isinstance(date_to, datetime.date):
-            date_to = date_to.strftime("%d-%m-%Y")
+            contract = self._contract
 
         path = "/ofex-water-consumptions-api/meter/consumptions"
         query = {
             "consumptionFrequency": frequency,
             "contractNumber": contract,
-            "clientId": user,
+            "clientId": self._company_identification or user,
             "userId": user,
             "lang": "ca",
-            "fromDate": date_from,
-            "toDate": date_to,
+            "fromDate": date_from.strftime("%d-%m-%Y"),
+            "toDate": date_to.strftime("%d-%m-%Y"),
             "showNegativeValues": "false",
         }
 

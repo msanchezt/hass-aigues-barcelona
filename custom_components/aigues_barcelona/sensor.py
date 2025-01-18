@@ -129,7 +129,12 @@ class ContratoAgua(TimestampDataUpdateCoordinator):
         hass.data[DOMAIN][self.contract]["coordinator"] = self
 
         # the api object
-        self._api = AiguesApiClient(username, password, contract)
+        self._api = AiguesApiClient(
+            username, 
+            password, 
+            contract,
+            company_identification=company_identification
+        )
         if token:
             self._api.set_token(token)
 
