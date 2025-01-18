@@ -172,16 +172,24 @@ class AiguesApiClient:
         assert r.json().get("user_data"), "User data missing"
         return r.json()
 
-    def contracts(self, user=None, status=["ASSIGNED", "PENDING"]):
+    def contracts(self, user=None, status=None):
         if user is None:
             user = self._return_token_field("name")
-        if isinstance(status, str):
-            status = [status]
+        if status is None:
+            status = ["ASSIGNED", "PENDING"]
 
         path = "/ofex-contracts-api/contracts"
-        query = {"lang": "ca", "userId": user, "clientId": user}
-        for idx, stat in enumerate(status):
-            query[f"assignationStatus[{str(idx)}]"] = stat.upper()
+        query = {
+            "userId": user,
+            "clientId": self._company_identification or user,  # Use company ID if available
+            "lang": "ca",
+        }
+
+        # Add status parameters directly, not as array indices
+        for stat in status:
+            if "assignationStatus" not in query:
+                query["assignationStatus"] = []
+            query["assignationStatus"].append(stat.upper())
 
         r = self._query(path, query)
 
