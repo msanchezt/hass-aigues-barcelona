@@ -62,8 +62,6 @@ async def validate_credentials(
     token = data.get(CONF_TOKEN)
     company_identification = data.get(CONF_COMPANY_IDENTIFICATOR)
 
-    _LOGGER.debug(f"Validating credentials with company_identification: {company_identification}")
-
     try:
         api = AiguesApiClient(
             username, 
@@ -72,31 +70,23 @@ async def validate_credentials(
         )
         if token:
             api.set_token(token)
-            _LOGGER.debug("Token set, attempting to validate")
             if api.is_token_expired():
-                _LOGGER.warning("Token is expired")
                 raise TokenExpired
         else:
-            _LOGGER.info("Attempting to login")
             login = await hass.async_add_executor_job(api.login)
             if not login:
                 if api.last_response and "recaptchaClientResponse" in str(api.last_response):
-                    _LOGGER.debug("Recaptcha required")
                     raise RecaptchaAppeared
-                _LOGGER.debug(f"Login failed")
                 raise InvalidAuth
 
-        # Verify we can access contracts
         contracts = await hass.async_add_executor_job(api.contracts, username)
         if not contracts:
-            _LOGGER.warning("No contracts found after login")
             raise InvalidAuth
 
         available_contracts = [x["contractDetail"]["contractNumber"] for x in contracts]
         return {CONF_CONTRACT: available_contracts}
 
     except Exception as e:
-        _LOGGER.error(f"Error during validation: {str(e)}")
         if "recaptchaClientResponse" in str(e):
             raise RecaptchaAppeared
         raise InvalidAuth from e

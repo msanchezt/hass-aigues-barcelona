@@ -130,15 +130,12 @@ class AiguesApiClient:
 
         r = self._query(path, query, body, headers, method="POST")
 
-        _LOGGER.debug(r)
         error = r.json().get("errorMessage", None)
         if error:
-            _LOGGER.warning(error)
             return False
 
         access_token = r.json().get("access_token", None)
         if not access_token:
-            _LOGGER.warning("Access token missing")
             return False
 
         return True
