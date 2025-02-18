@@ -72,12 +72,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     for contract in contracts:
         coordinator = ContratoAgua(
-            hass, 
-            username, 
-            password, 
-            contract, 
+            hass,
+            username,
+            password,
+            contract,
             token=token,
-            company_identification=company_identification
+            company_identification=company_identification,
         )
         contadores.append(ContadorAgua(coordinator))
 
@@ -130,10 +130,7 @@ class ContratoAgua(TimestampDataUpdateCoordinator):
 
         # the api object
         self._api = AiguesApiClient(
-            username, 
-            password, 
-            contract,
-            company_identification=company_identification
+            username, password, contract, company_identification=company_identification
         )
         if token:
             self._api.set_token(token)

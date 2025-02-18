@@ -27,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = AiguesApiClient(
         entry.data[CONF_USERNAME],
         entry.data[CONF_PASSWORD],
-        company_identification=entry.data.get(CONF_COMPANY_IDENTIFICATOR)
+        company_identification=entry.data.get(CONF_COMPANY_IDENTIFICATOR),
     )
     api.set_token(entry.data.get(CONF_TOKEN))
 

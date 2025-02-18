@@ -27,7 +27,7 @@
       },
       "reauth_confirm": {
         "title": "Relogin for account {account_id}",
-        "description": "Since Aigües de Barcelona uses Recaptcha, you'll need to provide the Token manually for account {account_id}.\nPlease paste the token string here (starts with ey....)"
+        "description": "Since Aig\u00fces de Barcelona uses Recaptcha, you'll need to provide the Token manually for account {account_id}.\nPlease paste the token string here (starts with ey....)"
       }
     }
   }

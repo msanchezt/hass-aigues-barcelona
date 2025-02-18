@@ -11,12 +11,12 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.const import CONF_TOKEN
 from homeassistant.const import CONF_USERNAME
-#from homeassistant.const import CONF_COMPANY_IDENTIFICATOR
+
+# from homeassistant.const import CONF_COMPANY_IDENTIFICATOR
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .api import AiguesApiClient
-from .const import API_ERROR_TOKEN_REVOKED
 from .const import CONF_CONTRACT
 from .const import DOMAIN
 from .const import CONF_COMPANY_IDENTIFICATOR
@@ -64,9 +64,7 @@ async def validate_credentials(
 
     try:
         api = AiguesApiClient(
-            username, 
-            password, 
-            company_identification=company_identification
+            username, password, company_identification=company_identification
         )
         if token:
             api.set_token(token)
@@ -75,7 +73,9 @@ async def validate_credentials(
         else:
             login = await hass.async_add_executor_job(api.login)
             if not login:
-                if api.last_response and "recaptchaClientResponse" in str(api.last_response):
+                if api.last_response and "recaptchaClientResponse" in str(
+                    api.last_response
+                ):
                     raise RecaptchaAppeared
                 raise InvalidAuth
 
@@ -131,19 +131,17 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Get the username/company_id from stored input
             identifier = self.stored_input.get(CONF_USERNAME)
             company_id = self.stored_input.get(CONF_COMPANY_IDENTIFICATOR)
-            
+
             # Mask the identifier showing only last 3 chars
             if identifier:
                 masked_id = f"***{identifier[-3:]}"
             if company_id:
                 masked_id = f"***{company_id[-3:]}"
-            
+
             return self.async_show_form(
                 step_id="reauth_confirm",
                 data_schema=TOKEN_SCHEMA,
-                description_placeholders={
-                    "account_id": masked_id
-                }
+                description_placeholders={"account_id": masked_id},
             )
 
         errors = {}
@@ -178,14 +176,11 @@ class AiguesBarcelonaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm", data_schema=TOKEN_SCHEMA, errors=errors
         )
 
-async def async_step_user(
-    self, user_input: dict[str, Any] | None = None
-) -> FlowResult:
+
+async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
     """Handle configuration step from UI."""
     if user_input is None:
-        return self.async_show_form(
-            step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA
-        )
+        return self.async_show_form(step_id="user", data_schema=ACCOUNT_CONFIG_SCHEMA)
 
     errors = {}
 

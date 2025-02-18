@@ -16,12 +16,12 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 class AiguesApiClient:
     def __init__(
-        self, 
-        username, 
-        password, 
-        contract=None, 
+        self,
+        username,
+        password,
+        contract=None,
         session: requests.Session = None,
-        company_identification=None
+        company_identification=None,
     ):
         if session is None:
             session = requests.Session()
@@ -72,10 +72,10 @@ class AiguesApiClient:
                 timeout=TIMEOUT,
             )
             _LOGGER.debug(f"Query done with code {resp.status_code}")
-            
+
             # Store raw response first
             self.last_response = resp.text
-            
+
             # Try to parse JSON response if possible
             try:
                 if resp.text and len(resp.text) > 0:
@@ -201,7 +201,9 @@ class AiguesApiClient:
                 query["assignationStatus"] = stat.upper()
             else:
                 # Append additional status values
-                query["assignationStatus"] = f"{query['assignationStatus']}&assignationStatus={stat.upper()}"
+                query["assignationStatus"] = (
+                    f"{query['assignationStatus']}&assignationStatus={stat.upper()}"
+                )
 
         r = self._query(path, query)
 
